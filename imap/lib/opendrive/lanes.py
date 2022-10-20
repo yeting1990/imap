@@ -16,6 +16,7 @@
 
 
 import math
+import copy
 
 from imap.lib.common import shift_t
 from imap.lib.draw import draw_line
@@ -266,7 +267,8 @@ class LaneSection:
     left = raw_lane_section.find("left")
     if left is not None:
       for raw_lane in left.iter('lane'):
-        lane = Lane(direction = -1)
+        # lane = Lane(direction = -1)
+        lane = Lane(direction=1)
         lane.parse_from(raw_lane)
         self.add_left_lane(lane)
 
@@ -279,7 +281,8 @@ class LaneSection:
     right = raw_lane_section.find("right")
     if right is not None:
       for raw_lane in right.iter('lane'):
-        lane = Lane(direction = 1)
+        # lane = Lane(direction = 1)
+        lane = Lane(direction=-1)
         lane.parse_from(raw_lane)
         self.add_right_lane(lane)
 
@@ -313,19 +316,31 @@ class LaneSection:
 
 
   def process_lane(self, reference_line):
-    left_boundary = reference_line.copy()
+    # left_boundary = reference_line.copy()
+    left_boundary = self.extract_reference_line(reference_line)
     left_boundary_type = self.center.generate_boundary_type(None)
     # The left lane is opposite to the reference line
     left_boundary.reverse()
+
     for lane in self.left[::-1]:
       left_boundary = lane.generate_boundary(left_boundary)
       left_boundary_type = lane.generate_boundary_type(left_boundary_type)
 
-    left_boundary = reference_line.copy()
+    # left_boundary = reference_line.copy()
+    left_boundary = self.extract_reference_line(reference_line)
+
     left_boundary_type = self.center.generate_boundary_type(None)
     for lane in self.right:
       left_boundary = lane.generate_boundary(left_boundary)
       left_boundary_type = lane.generate_boundary_type(left_boundary_type)
+
+  def extract_reference_line(self, ref):
+    extracted = []
+    for point in ref:
+      if math.ceil(self.end_s) >= point.s >= math.floor(self.s):
+        extracted.append(copy.deepcopy(point))
+        extracted[-1].s -= self.s
+    return extracted
 
   def get_cross_section(self, direction):
     if direction == "start":
